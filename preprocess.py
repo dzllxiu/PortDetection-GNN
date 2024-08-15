@@ -2,6 +2,8 @@ import numpy as np
 from pathlib import Path
 import json
 from sklearn import preprocessing
+import argparse
+import pandas as pd
 
 data_path = Path('./data/subnet')
 
@@ -38,9 +40,36 @@ def get_x_y():
 	ip_split2 = preprocessing.MinMaxScaler().fit_transform(np.array(ip_split2).reshape(-1, 1))
 	ip_split3 = preprocessing.MinMaxScaler().fit_transform(np.array(ip_split3).reshape(-1, 1))
 	ip_split4 = preprocessing.MinMaxScaler().fit_transform(np.array(ip_split4).reshape(-1, 1))
+
+	x = np.concatenate((asn, org, ip_split1, ip_split2, ip_split3, ip_split4), axis=1)
+	y = np.array(pd.DataFrame(ports))
+	return x, y
+
+
+def split_train_test(num, seed, train_test_ratio=0.8, neighbor_ratio=0.7):
+	'''
+	划分训练集和测试集
+	'''
+	np.random.seed(seed)
+	index = list(range(num))
+	np.random.shuffle(index) # 随机打乱下标
+	neighbor_train = index[:int(num * train_test_ratio * neighbor_ratio)]
+	target_train = index[int(num * train_test_ratio * neighbor_ratio):int(num * train_test_ratio)]
+	neighbor_test = neighbor_train + target_train
+	target_test = index[int(num * train_test_ratio):]
+	return neighbor_train, target_train, neighbor_test, target_test
+
             
 if __name__ == '__main__':
-    get_x_y()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--train_test_ratio', type=float, default=0.8)
+    parser.add_argument('--neighbor_ratio', type=float, default=0.7)
+    args = parser.parse_args()
+    
+    features, open_ports = get_x_y()
+    
+    neighbor_train, target_train, neighbor_test, target_test = split_train_test(features.shape[0], args.seed, args.train_test_ratio, args.neighbor_ratio)
             
             
             
